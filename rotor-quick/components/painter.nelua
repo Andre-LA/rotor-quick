@@ -1,10 +1,9 @@
 require 'rotor-quick.makers'
 
-local Color = tico.Color
-
 global RotorQuick.Components.Painter = @record{
-  color: Color,
+  color: Nene.Color,
   active: boolean,
+  use_lines: boolean,
 }
 
 local Painter = RotorQuick.Components.Painter

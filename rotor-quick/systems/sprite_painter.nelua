@@ -1,15 +1,12 @@
+require 'nene'
 require 'math'
-require 'tico'
+
 require 'rotor-quick.makers'
 require 'rotor-quick.components.position'
 require 'rotor-quick.components.sprite'
 require 'rotor-quick.components.painter'
 
-local Rectf = tico.Rectf
-
-local Position = RotorQuick.Components.Position
-local Sprite = RotorQuick.Components.Sprite
-local Painter = RotorQuick.Components.Painter
+local RQ_Comps = RotorQuick.Components
 
 local EachRunIds = @record{
   position_id: GenerationalIndex,
@@ -17,27 +14,10 @@ local EachRunIds = @record{
   sprite_id: GenerationalIndex,
 }
 
-local function paint(position: *Position, painter: *Painter, sprite: *Sprite)
-  if not painter.active then
-    return
-  end
-
-  local img_unit_w: integer = math.ifloor(sprite.sprite_sheet.width / sprite.frame_rect.w)
-  local img_unit_h: integer = math.ifloor(sprite.sprite_sheet.height / sprite.frame_rect.h)
-
-  sprite.frame_rect.x = (sprite.frame_index % img_unit_w) * sprite.frame_rect.w
-  sprite.frame_rect.y = math.ifloor(sprite.frame_index / img_unit_w) * sprite.frame_rect.h
-
-  local drawpos = position:get_global_position() + sprite.offset
-
-  local dest: Rectf = { x = drawpos.x, drawpos.y, w = sprite.frame_rect.w, h = sprite.frame_rect.h }
-  tico.graphics_draw(sprite.sprite_sheet, dest, sprite.frame_rect, painter.color)
-end
-
 global RotorQuick.Systems.SpritePainter = @MakeSystem('SpritePainter', @record{
-  position: Position,
-  painter: Painter,
-  sprite: Sprite
+  position: RQ_Comps.Position,
+  painter: RQ_Comps.Painter,
+  sprite: RQ_Comps.Sprite
 })
 
 local SpritePainter = RotorQuick.Systems.SpritePainter
@@ -46,7 +26,7 @@ local SpritePainter = RotorQuick.Systems.SpritePainter
 local DrawOrder: type = @vector(vector(EachRunIds))
 ## SpritePainter.value:add_field('draw_order', DrawOrder.value)
 
-function SpritePainter:run()
+function SpritePainter:run(core_state: *Nene.CoreState)
   ## if PROF then
     nprof:push(#[SpritePainter.value.nickname]#)
     defer nprof:pop() end
@@ -73,13 +53,17 @@ function SpritePainter:run()
       local sprite_opt = RotorQuick.storages.sprite:get_entry(sprite_id)
 
       if position_opt.filled and painter_opt.filled and sprite_opt.filled then
-        local sprite: *Sprite = sprite_opt:get()
+        local painter = painter_opt:get()
 
-        if #self.draw_order <= sprite.layer then
-          self.draw_order:resize(sprite.layer + 1)
+        if painter.active then
+          local sprite = sprite_opt:get()
+
+          if #self.draw_order <= sprite.layer then
+            self.draw_order:resize(sprite.layer + 1)
+          end
+
+          self.draw_order[sprite.layer]:push({ position_id, painter_id, sprite_id })
         end
-
-        self.draw_order[sprite.layer]:push({ position_id, painter_id, sprite_id })
       else
         self.system_data:mark_available(i)
       end
@@ -94,7 +78,13 @@ function SpritePainter:run()
       local painter_opt = RotorQuick.storages.painter:get_entry(current_layer[j].painter_id)
       local sprite_opt = RotorQuick.storages.sprite:get_entry(current_layer[j].sprite_id)
 
-      paint(position_opt:get(), painter_opt:get(), sprite_opt:get())
+      local position = position_opt:get()
+      local painter = painter_opt:get()
+      local sprite = sprite_opt:get()
+
+      local drawpos = position:get_global_position() + sprite.offset
+      local spritesheet = $sprite.spritesheet
+      core_state:render_draw_atlas_frame(spritesheet, sprite.current_frame, drawpos, painter.color)
     end
   end
 end

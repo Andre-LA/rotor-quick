@@ -7,14 +7,12 @@ require 'rotor.optional'
 require 'rotor-quick.makers'
 
 global RotorQuick.Components.SceneGraphNode = @record{
-  entity_id: GenerationalIndex,
-  self_id: GenerationalIndex,
   parent_id: GenerationalIndex,
   children_ids: vector(GenerationalIndex), -- points to other SceneGraphNode ids
 }
 
 local SceneGraphNode = RotorQuick.Components.SceneGraphNode
-## is_component(SceneGraphNode)
+## is_component(SceneGraphNode, true)
 
 local function find_child_index(node: *SceneGraphNode, child_node_id: GenerationalIndex): optional(usize)
   local result: optional(usize) = {}
@@ -57,7 +55,7 @@ function SceneGraphNode:iter_children(): (
     return can_iter, ctrl_var, child_node, child_node_id
   end
 
-  return iterator, self.children_ids, -1
+  return iterator, &self.children_ids, -1
 end
 
 function SceneGraphNode:attach_child(child_node_id: GenerationalIndex)
@@ -109,7 +107,6 @@ function SceneGraphNode:get_traversal(nodes: *vector(GenerationalIndex), childre
   ## end
 end
 
-function SceneGraphNode:init(entity_id: GenerationalIndex, self_id: GenerationalIndex)
-  self.entity_id = entity_id
-  self.self_id = self_id
+function SceneGraphNode:destroy()
+  self.children_ids:destroy()
 end

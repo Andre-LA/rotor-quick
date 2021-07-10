@@ -1,8 +1,6 @@
 require 'vector'
-require 'tico'
+require 'nene.math'
 require 'rotor-quick.makers'
-
-local Vec2 = tico.Vec2
 
 local ShapeCategory = @enum{
   Rectangle = 1,
@@ -13,10 +11,14 @@ local ShapeCategory = @enum{
 
 global RotorQuick.Components.Shape = @record{
   category: ShapeCategory,
-  vertices: vector(Vec2), -- TODO: rethink this type, can be optimized?
+  vertices: vector(Nene.Math.Vec2), -- TODO: rethink this type, can be optimized?
 }
 
 local Shape = RotorQuick.Components.Shape
 ## is_component(Shape)
+
+function Shape:destroy()
+  self.vertices:destroy()
+end
 
 global Shape.ShapeCategory = ShapeCategory
